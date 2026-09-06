@@ -1,84 +1,125 @@
-document.addEventListener('DOMContentLoaded', () => {
+/* ==========================================================================
+   CLIENTS — directory, add client, per-client devis/facture history
+   TODO backend: replace NOVA.getClients()/addClient() with real API calls
+   ========================================================================== */
+
+let clientSearch = "";
+
+function clientTotals(clientId){
+  const devis = NOVA.getDevis().filter(d=>d.clientId===clientId);
+  const factures = NOVA.getFactures().filter(f=>f.clientId===clientId);
+  const totalFacture = factures.reduce((s,f)=>s+f.montant,0);
+  return { devisCount: devis.length, facturesCount: factures.length, totalFacture, devis, factures };
+}
+
+function renderClients(){
+  const clients = NOVA.getClients().filter(c=>{
+    if(!clientSearch) return true;
+    const q = clientSearch.toLowerCase();
+    return c.name.toLowerCase().includes(q) || c.city.toLowerCase().includes(q) || c.ice.toLowerCase().includes(q);
+  });
+
+  const wrap = document.getElementById("clientsWrap");
+  if(clients.length === 0){
+    wrap.innerHTML = `
+      <div class="empty">
+        <div class="glyph">${NOVA.icon("users",44)}</div>
+        <h3>Aucun client trouvé.</h3>
+        <p>Essaie une autre recherche, ou ajoute un nouveau client.</p>
+        <button class="btn btn-primary" onclick="document.getElementById('openNewClient').click()">Nouveau client</button>
+      </div>`;
+    return;
+  }
+
+  wrap.innerHTML = `<div class="client-cards">
+    ${clients.map(c=>{
+      const stats = clientTotals(c.id);
+      const initials = c.name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();
+      return `
+      <div class="client-card" data-id="${c.id}">
+        <div class="client-avatar">${initials}</div>
+        <div class="row-title" style="font-size:15px;">${c.name}</div>
+        <div class="row-sub">${c.city} · ICE ${c.ice}</div>
+        <div class="row-sub mt-8">${c.contact}</div>
+        <div class="client-stats">
+          <div><b>${stats.devisCount}</b>Devis</div>
+          <div><b>${stats.facturesCount}</b>Factures</div>
+          <div><b>${NOVA.fmtMAD(stats.totalFacture).replace(" MAD","")}</b>MAD facturés</div>
+        </div>
+      </div>`;
+    }).join("")}
+  </div>`;
+}
+
+function openClientDetail(id){
+  const client = NOVA.clientById(id);
+  if(!client) return;
+  const stats = clientTotals(id);
+  const modal = document.getElementById("detailModal");
+  document.getElementById("detailContent").innerHTML = `
+    <span class="eyebrow">[ ${client.ice} ]</span>
+    <h3 style="margin-bottom:4px;">${client.name}</h3>
+    <p class="small">${client.contact} · ${client.email}</p>
+    <p class="small mt-8">${client.city} · Client depuis ${NOVA.fmtDate(client.createdAt)}</p>
+
+    <div class="mt-24">
+      <div class="card-head"><h3 style="font-size:13px;">Devis (${stats.devis.length})</h3></div>
+      ${stats.devis.slice(0,4).map(d=>`
+        <div class="totals-row"><span>${d.ref}</span><span><span class="badge ${NOVA.DEVIS_STATUS_CLASS[d.status]}" style="margin-right:8px;">${NOVA.DEVIS_STATUS_LABEL[d.status]}</span>${NOVA.fmtMAD(d.montant)}</span></div>
+      `).join("") || `<p class="small muted">Aucun devis.</p>`}
+    </div>
+
+    <div class="mt-24">
+      <div class="card-head"><h3 style="font-size:13px;">Factures (${stats.factures.length})</h3></div>
+      ${stats.factures.slice(0,4).map(f=>`
+        <div class="totals-row"><span>${f.ref}</span><span><span class="badge ${NOVA.FAC_STATUS_CLASS[f.status]}" style="margin-right:8px;">${NOVA.FAC_STATUS_LABEL[f.status]}</span>${NOVA.fmtMAD(f.montant)}</span></div>
+      `).join("") || `<p class="small muted">Aucune facture.</p>`}
+    </div>
+
+    <button class="btn mt-24" style="width:100%;" id="closeDetail">Fermer</button>
+  `;
+  modal.classList.add("open");
+  document.getElementById("closeDetail").addEventListener("click", ()=> modal.classList.remove("open"));
+}
+
+document.addEventListener("DOMContentLoaded", ()=>{
   renderClients();
-  document.getElementById('client-search').addEventListener('input', (e) => renderClients(e.target.value));
-  const params = new URLSearchParams(location.search);
-  if(params.get('new') === '1') novaNewClient();
-  novaIcons();
+
+  document.getElementById("searchInput").addEventListener("input", (e)=>{
+    clientSearch = e.target.value; renderClients();
+  });
+
+  document.getElementById("clientsWrap").addEventListener("click", (e)=>{
+    const card = e.target.closest(".client-card");
+    if(!card) return;
+    openClientDetail(card.dataset.id);
+  });
+
+  const detailModal = document.getElementById("detailModal");
+  detailModal.addEventListener("click", (e)=>{ if(e.target===detailModal) detailModal.classList.remove("open"); });
+
+  const clientModal = document.getElementById("clientModal");
+  document.getElementById("openNewClient").addEventListener("click", ()=>{
+    document.getElementById("clientForm").reset();
+    clientModal.classList.add("open");
+  });
+  document.getElementById("cancelClient").addEventListener("click", ()=> clientModal.classList.remove("open"));
+  clientModal.addEventListener("click", (e)=>{ if(e.target===clientModal) clientModal.classList.remove("open"); });
+
+  document.getElementById("clientForm").addEventListener("submit", (e)=>{
+    e.preventDefault();
+    const name = document.getElementById("cName").value.trim();
+    if(!name){ NOVA.toast("Le nom de l'entreprise est requis"); return; }
+    NOVA.addClient({
+      name,
+      contact: document.getElementById("cContact").value.trim() || "—",
+      ice: document.getElementById("cIce").value.trim() || "—",
+      email: document.getElementById("cEmail").value.trim() || "—",
+      phone: "—",
+      city: document.getElementById("cCity").value,
+    });
+    clientModal.classList.remove("open");
+    renderClients();
+    NOVA.toast("✓ Client ajouté");
+  });
 });
-
-function initials(name){
-  return name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-}
-
-function clientStats(clientId){
-  const d = NOVA.data();
-  const facs = d.factures.filter(f => f.clientId === clientId);
-  const total = facs.reduce((s,f) => s + NOVA.docTotals(f.items).total, 0);
-  const paid = facs.filter(f=>f.status==='Payée').reduce((s,f) => s + NOVA.docTotals(f.items).total, 0);
-  return { count: facs.length, total, paid, unpaid: total - paid };
-}
-
-function renderClients(filter=''){
-  const d = NOVA.data();
-  const f = filter.toLowerCase();
-  const tbody = document.getElementById('client-tbody');
-  const rows = d.clients.filter(c => c.name.toLowerCase().includes(f) || c.email.toLowerCase().includes(f));
-  tbody.innerHTML = rows.map(c => {
-    const s = clientStats(c.id);
-    return `<tr style="cursor:pointer" onclick="novaOpenClient('${c.id}')">
-      <td class="row-client"><div class="avatar" style="width:26px;height:26px;font-size:10px;">${initials(c.name)}</div><span class="cell-primary">${c.name}</span></td>
-      <td class="cell-muted">${c.phone}</td>
-      <td class="cell-muted">${c.email}</td>
-      <td class="cell-num">${NOVA.fmt(s.total)}</td>
-      <td class="cell-num">${s.count}</td>
-      <td class="cell-muted">${c.createdAt.split('-').reverse().join('/')}</td>
-    </tr>`;
-  }).join('') || `<tr><td colspan="6"><div class="empty-state"><i data-lucide="users" class="es-icon"></i>Aucun client trouvé</div></td></tr>`;
-  novaIcons();
-}
-
-function novaOpenClient(id){
-  const c = NOVA.client(id);
-  if(!c) return;
-  document.getElementById('view-list').style.display = 'none';
-  document.getElementById('view-detail').style.display = 'block';
-
-  document.getElementById('cd-avatar').textContent = initials(c.name);
-  document.getElementById('cd-name').textContent = c.name;
-  document.getElementById('cd-contact').textContent = `${c.phone} · ${c.email}`;
-
-  const s = clientStats(c.id);
-  novaCountUp(document.getElementById('cd-total'), s.total, { money:true, duration:600 });
-  novaCountUp(document.getElementById('cd-paid'), s.paid, { money:true, duration:600 });
-  novaCountUp(document.getElementById('cd-unpaid'), s.unpaid, { money:true, duration:600 });
-
-  const d = NOVA.data();
-  const devisRows = d.devis.filter(x => x.clientId === id).map(x => ({ type:'Devis', id:x.id, date:x.date, total:NOVA.docTotals(x.items).total, status:x.status }));
-  const facRows = d.factures.filter(x => x.clientId === id).map(x => ({ type:'Facture', id:x.id, date:x.date, total:NOVA.docTotals(x.items).total, status:x.status }));
-  const all = [...devisRows, ...facRows].sort((a,b) => b.date.localeCompare(a.date));
-
-  const statusClassAll = { 'Payée':'paid','En attente':'pending','En retard':'overdue','Brouillon':'draft','Envoyé':'sent','Accepté':'accepted','Refusé':'refused','Expiré':'expired' };
-  document.getElementById('cd-history').innerHTML = all.map(r => `
-    <tr><td>${r.type}</td><td class="cell-primary">${r.id}</td><td class="cell-muted">${r.date.split('-').reverse().join('/')}</td>
-    <td class="cell-num">${NOVA.fmt(r.total)}</td><td><span class="status ${statusClassAll[r.status]}">${r.status}</span></td></tr>`).join('')
-    || `<tr><td colspan="5"><div class="empty-state">Aucun historique</div></td></tr>`;
-}
-
-function novaCloseDetail(){
-  document.getElementById('view-detail').style.display = 'none';
-  document.getElementById('view-list').style.display = 'block';
-  renderClients();
-}
-
-function novaNewClient(){
-  const name = prompt('Nom du client :');
-  if(!name) return;
-  const client = {
-    id: 'c' + Date.now(),
-    name, phone: '+212 6 00 00 00 00', email: name.toLowerCase().replace(/\s+/g,'.') + '@email.com',
-    type: 'Particulier', createdAt: new Date().toISOString().slice(0,10)
-  };
-  NOVA.addClient(client);
-  novaToast(`${name} ajouté à vos clients`);
-  renderClients();
-}
