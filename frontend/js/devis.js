@@ -1,255 +1,238 @@
-let edLines = [];
-let edClientId = null;
+/* ==========================================================================
+   DEVIS — list, filters, creation drawer with line-item builder
+   TODO backend: replace NOVA.getDevis()/addDevis() with real API calls
+   ========================================================================== */
 
-document.addEventListener('DOMContentLoaded', () => {
-  renderDevisList();
-  populateClientSelect();
+let devisState = { search:"", status:"all", client:"" };
+let lineIdCounter = 0;
 
-  document.getElementById('devis-search').addEventListener('input', (e) => renderDevisList(e.target.value));
-
-  const params = new URLSearchParams(location.search);
-  if(params.get('new') === '1') novaOpenEditor();
-
-  novaIcons();
-});
-
-function statusClass(s){
-  return { 'Brouillon':'draft', 'Envoyé':'sent', 'Accepté':'accepted', 'Refusé':'refused', 'Expiré':'expired' }[s] || 'draft';
-}
-
-function renderDevisList(filter=''){
-  const d = NOVA.data();
-  const tbody = document.getElementById('devis-tbody');
-  const f = filter.toLowerCase();
-  const rows = d.devis.filter(dv => {
-    const c = NOVA.client(dv.clientId);
-    return dv.id.toLowerCase().includes(f) || (c && c.name.toLowerCase().includes(f));
+function populateClientSelects(){
+  const clients = NOVA.getClients();
+  const filter = document.getElementById("clientFilter");
+  const formSelect = document.getElementById("fClient");
+  clients.forEach(c=>{
+    filter.insertAdjacentHTML("beforeend", `<option value="${c.id}">${c.name}</option>`);
+    formSelect.insertAdjacentHTML("beforeend", `<option value="${c.id}">${c.name}</option>`);
   });
-  tbody.innerHTML = rows.map(dv => {
-    const c = NOVA.client(dv.clientId);
-    const total = NOVA.docTotals(dv.items).total;
-    return `<tr>
-      <td class="cell-primary">${dv.id}</td>
-      <td>${c ? c.name : '—'}</td>
-      <td class="cell-muted">${dv.date.split('-').reverse().join('/')}</td>
-      <td class="cell-num">${NOVA.fmt(total)}</td>
-      <td><span class="status ${statusClass(dv.status)}">${dv.status}</span></td>
-      <td>
-        <div class="row-actions">
-          <button class="icon-btn" title="Télécharger" onclick="novaToast('Téléchargement du ${dv.id}')"><i data-lucide="download"></i></button>
-          <button class="icon-btn" title="Envoyer" onclick="novaToast('${dv.id} envoyé au client')"><i data-lucide="send"></i></button>
-          <button class="icon-btn" title="Convertir en facture" onclick="novaConvertToFacture('${dv.id}')"><i data-lucide="repeat"></i></button>
-        </div>
-      </td>
-    </tr>`;
-  }).join('') || `<tr><td colspan="6"><div class="empty-state"><i data-lucide="file-text" class="es-icon"></i>Aucun devis trouvé</div></td></tr>`;
-  novaIcons();
 }
 
-function novaConvertToFacture(devisId){
-  const fac = NOVA.convertDevisToFacture(devisId);
-  if(fac){ novaToast(`Devis converti en ${fac.id}`); renderDevisList(); }
-}
-
-function populateClientSelect(){
-  const d = NOVA.data();
-  const sel = document.getElementById('ed-client');
-  sel.innerHTML = d.clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-  sel.addEventListener('change', () => { edClientId = sel.value; updatePreview(); });
-  edClientId = d.clients[0].id;
-}
-
-function novaOpenEditor(){
-  document.getElementById('view-list').style.display = 'none';
-  document.getElementById('view-editor').style.display = 'block';
-  edLines = [
-    { name: 'Climatiseur 12000 BTU', unit: 'Forfait', qty: 3, price: 3500 },
-    { name: "Main d'œuvre", unit: 'Forfait', qty: 1, price: 900 }
-  ];
-  document.getElementById('ed-description').value = '';
-  renderLines();
-  document.getElementById('doc-num').textContent = novaNextDevisId();
-  const today = new Date();
-  const validity = new Date(today); validity.setDate(validity.getDate() + 30);
-  document.getElementById('doc-date').textContent = today.toLocaleDateString('fr-FR');
-  document.getElementById('doc-validity').textContent = validity.toLocaleDateString('fr-FR');
-  updatePreview();
-}
-
-function novaCloseEditor(){
-  document.getElementById('view-editor').style.display = 'none';
-  document.getElementById('view-list').style.display = 'block';
-  renderDevisList();
-}
-
-function novaNextDevisId(){
-  const d = NOVA.data();
-  const nums = d.devis.map(x => parseInt(x.id.split('-')[2])).filter(n=>!isNaN(n));
-  const next = (nums.length ? Math.max(...nums) : 0) + 1;
-  return `DEV-2026-${String(next).padStart(3,'0')}`;
-}
-
-const NOVA_UNITS = ['Forfait', 'Jours', 'Heures', 'Pièce', 'Mois'];
-
-function renderLines(){
-  const wrap = document.getElementById('line-items');
-  wrap.innerHTML = edLines.map((l,i) => `
-    <div class="line-item">
-      <input type="text" value="${l.name}" onchange="edLines[${i}].name=this.value; updatePreview();" placeholder="Description">
-      <select onchange="edLines[${i}].unit=this.value; updatePreview();" title="Unité">
-        ${NOVA_UNITS.map(u => `<option value="${u}" ${(l.unit||'Forfait')===u?'selected':''}>${u}</option>`).join('')}
-      </select>
-      <input type="number" value="${l.qty}" min="1" onchange="edLines[${i}].qty=parseFloat(this.value)||1; updatePreview();" title="Quantité">
-      <input type="number" value="${l.price}" min="0" onchange="edLines[${i}].price=parseFloat(this.value)||0; updatePreview();" title="Prix">
-      <span class="li-remove" onclick="novaRemoveLine(${i})"><i data-lucide="x"></i></span>
-    </div>`).join('');
-  novaIcons();
-}
-
-function novaAddLine(){
-  edLines.push({ name:'', unit:'Forfait', qty:1, price:0 });
-  renderLines();
-  updatePreview();
-}
-function novaRemoveLine(i){
-  edLines.splice(i,1);
-  renderLines();
-  updatePreview();
-}
-
-function novaComputeObjet(){
-  const desc = document.getElementById('ed-description').value.trim();
-  if(desc) return desc.charAt(0).toUpperCase() + desc.slice(1);
-  const names = edLines.filter(l => l.name).map(l => l.name);
-  if(names.length) return 'Fourniture et installation : ' + names.join(', ');
-  return 'Prestation de services';
-}
-
-function updatePreview(){
-  const c = NOVA.client(edClientId) || NOVA.client(document.getElementById('ed-client').value);
-  document.getElementById('doc-client-name').textContent = c ? c.name : '—';
-  document.getElementById('doc-client-phone').textContent = c ? c.phone : '';
-  document.getElementById('doc-objet').textContent = novaComputeObjet();
-
-  const items = document.getElementById('doc-items');
-  items.innerHTML = edLines.map(l => `
-    <tr><td>${l.name || '—'}</td><td>${l.unit || 'Forfait'}</td><td>${l.qty}</td><td>${NOVA.fmtNum(l.price)}</td><td>${NOVA.fmtNum(l.qty*l.price)}</td></tr>`).join('');
-
-  const t = NOVA.docTotals(edLines);
-  document.getElementById('doc-sub').textContent = NOVA.fmt(t.sub);
-  document.getElementById('doc-tva').textContent = NOVA.fmt(t.tva);
-  document.getElementById('doc-total').textContent = NOVA.fmt(t.total);
-}
-
-// ---------- AI generation simulation ----------
-function novaGenerateAI(){
-  const text = document.getElementById('ed-description').value.trim();
-  if(!text){ novaToast('Décrivez la prestation pour générer un devis'); return; }
-
-  const modal = document.getElementById('ai-modal');
-  modal.classList.add('open');
-  const steps = modal.querySelectorAll('.gen-step');
-  steps.forEach(s => s.classList.remove('active','done'));
-
-  let i = 0;
-  function next(){
-    if(i > 0) steps[i-1].classList.remove('active');
-    if(i > 0) steps[i-1].classList.add('done');
-    if(i > 0) steps[i-1].innerHTML = `<span class="gs-icon"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>` + steps[i-1].textContent;
-    if(i < steps.length){
-      steps[i].classList.add('active');
-      i++;
-      setTimeout(next, 480);
-    } else {
-      setTimeout(() => {
-        modal.classList.remove('open');
-        edLines = NOVA.parseDescription(text).map(l => ({ unit: 'Forfait', ...l }));
-        renderLines();
-        updatePreview();
-        novaToast('✓ Devis prêt');
-      }, 350);
+function renderTable(){
+  const devis = NOVA.getDevis();
+  const filtered = devis.filter(d=>{
+    if(devisState.status !== "all" && d.status !== devisState.status) return false;
+    if(devisState.client && d.clientId !== devisState.client) return false;
+    if(devisState.search){
+      const q = devisState.search.toLowerCase();
+      const client = NOVA.clientById(d.clientId);
+      if(!d.ref.toLowerCase().includes(q) && !(client && client.name.toLowerCase().includes(q))) return false;
     }
+    return true;
+  }).sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+
+  const wrap = document.getElementById("tableWrap");
+  if(filtered.length === 0){
+    wrap.innerHTML = `
+      <div class="empty">
+        <div class="glyph">${NOVA.icon("quote",44)}</div>
+        <h3>Aucun devis trouvé.</h3>
+        <p>Essaie d'autres filtres, ou crée ton premier devis.</p>
+        <button class="btn btn-primary" onclick="document.getElementById('openNewDevis').click()">Nouveau devis</button>
+      </div>`;
+    return;
   }
-  next();
+
+  wrap.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Référence</th><th>Client</th><th>Date</th><th class="num">Montant</th><th>Statut</th><th></th>
+        </tr></thead>
+        <tbody>
+          ${filtered.map(d=>{
+            const client = NOVA.clientById(d.clientId);
+            return `
+            <tr data-id="${d.id}">
+              <td><div class="row-title">${d.ref}</div></td>
+              <td>${client ? client.name : "—"}<div class="row-sub">${client ? client.city : ""}</div></td>
+              <td>${NOVA.fmtDate(d.createdAt)}</td>
+              <td class="num">${NOVA.fmtMAD(d.montant)}</td>
+              <td><span class="badge ${NOVA.DEVIS_STATUS_CLASS[d.status]}">${NOVA.DEVIS_STATUS_LABEL[d.status]}</span></td>
+              <td>
+                <div class="row-actions">
+                  <button class="icon-btn" data-action="view" title="Voir">${NOVA.icon("eye",14)}</button>
+                  <button class="icon-btn" data-action="convert" title="Convertir en facture" ${d.status!=="accepte"?"disabled":""}>${NOVA.icon("convert",14)}</button>
+                  <button class="icon-btn" data-action="download" title="Télécharger PDF">${NOVA.icon("download",14)}</button>
+                  <button class="icon-btn" data-action="delete" title="Supprimer">${NOVA.icon("trash",14)}</button>
+                </div>
+              </td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
-// ---------- Voice capture simulation ----------
-function novaVoiceCapture(){
-  const btn = document.getElementById('voice-btn');
-  const dots = document.getElementById('voice-dots');
-  btn.style.display = 'none';
-  dots.style.display = 'flex';
-  setTimeout(() => {
-    dots.style.display = 'none';
-    btn.style.display = 'flex';
-    document.getElementById('ed-description').value = "Installation de 2 climatiseurs 18000 BTU à 5200 DH chacun, plus main d'œuvre 900 DH";
-    novaGenerateAI();
-  }, 1800);
+/* ---------------- Line item builder ---------------- */
+function addLineRow(desc="", qty=1, price=""){
+  const id = "li" + (lineIdCounter++);
+  const wrap = document.getElementById("lineItems");
+  const row = document.createElement("div");
+  row.className = "line-item";
+  row.dataset.id = id;
+  row.innerHTML = `
+    <input type="text" placeholder="Description de la prestation" class="li-desc" value="${desc}">
+    <input type="number" min="1" placeholder="Qté" class="li-qty" value="${qty}">
+    <input type="number" min="0" placeholder="Prix unitaire" class="li-price" value="${price}">
+    <span class="line-total">0 MAD</span>
+    <button type="button" class="icon-btn" data-remove="${id}">${NOVA.icon("x",13)}</button>
+  `;
+  wrap.appendChild(row);
+  row.querySelectorAll("input").forEach(inp=> inp.addEventListener("input", updateTotals));
+  row.querySelector("[data-remove]").addEventListener("click", ()=>{ row.remove(); updateTotals(); });
 }
 
-// ---------- Save ----------
-function novaSaveDevis(){
-  if(edLines.length === 0 || edLines.every(l=>!l.name)){ novaToast('Ajoutez au moins un article'); return; }
-  const devis = {
-    id: document.getElementById('doc-num').textContent,
-    clientId: document.getElementById('ed-client').value,
-    date: new Date().toISOString().slice(0,10),
-    status: 'Brouillon',
-    items: edLines.filter(l=>l.name)
-  };
-  NOVA.addDevis(devis);
-  novaToast(`${devis.id} enregistré`);
-  novaCloseEditor();
-}
-
-// ---------- PDF ----------
-function novaDownloadPdf(){
-  if(!window.jspdf){ novaToast('Génération du PDF...'); return; }
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit:'pt', format:'a4' });
-  const c = NOVA.client(document.getElementById('ed-client').value);
-  const t = NOVA.docTotals(edLines);
-  let y = 60;
-  doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(40,86,163);
-  doc.text('NOVA', 48, y);
-  doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(107,114,128);
-  doc.text('Atlas Climatisation — Casablanca', 48, y+16);
-  doc.text('ICE: 0021458796000045', 48, y+30);
-  doc.setTextColor(26,29,36); doc.setFontSize(20); doc.setFont('helvetica','bold');
-  doc.text('DEVIS', 48, y+70);
-  doc.setFontSize(11); doc.setFont('helvetica','normal');
-  doc.text(document.getElementById('doc-num').textContent, 400, y);
-  doc.text('Validité: ' + document.getElementById('doc-validity').textContent, 400, y+16);
-  doc.text('Client: ' + (c ? c.name : '—'), 48, y+95);
-  doc.setFontSize(10);
-  doc.text('Objet: ' + document.getElementById('doc-objet').textContent, 48, y+112, { maxWidth: 500 });
-
-  y += 145;
-  doc.setFillColor(40,86,163);
-  doc.rect(48, y-12, 499, 18, 'F');
-  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(10);
-  doc.text('Désignation', 54, y); doc.text('Unité', 280, y); doc.text('Qté', 340, y); doc.text('P.U.', 390, y); doc.text('Total HT', 460, y);
-  doc.setTextColor(26,29,36); doc.setFont('helvetica','normal'); doc.setFontSize(10.5);
-  y += 20;
-  edLines.forEach(l => {
-    doc.text(String(l.name), 54, y);
-    doc.text(String(l.unit || 'Forfait'), 280, y);
-    doc.text(String(l.qty), 340, y);
-    doc.text(NOVA.fmtNum(l.price), 390, y);
-    doc.text(NOVA.fmtNum(l.qty*l.price), 460, y);
-    y += 20;
+function updateTotals(){
+  let subtotal = 0;
+  document.querySelectorAll(".line-item").forEach(row=>{
+    const qty = parseFloat(row.querySelector(".li-qty").value) || 0;
+    const price = parseFloat(row.querySelector(".li-price").value) || 0;
+    const total = qty*price;
+    row.querySelector(".line-total").textContent = NOVA.fmtMAD(total);
+    subtotal += total;
   });
-  y += 10;
-  doc.setDrawColor(230,232,238);
-  doc.line(300, y, 547, y); y += 20;
-  doc.setTextColor(107,114,128);
-  doc.text('Total HT: ' + NOVA.fmt(t.sub), 400, y); y += 16;
-  doc.text('TVA (20%): ' + NOVA.fmt(t.tva), 400, y); y += 18;
-  doc.setFillColor(40,86,163);
-  doc.rect(390, y-14, 157, 22, 'F');
-  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
-  doc.text('Total TTC: ' + NOVA.fmt(t.total), 398, y+2);
+  const tva = subtotal*0.2;
+  document.getElementById("subtotalVal").textContent = NOVA.fmtMAD(subtotal);
+  document.getElementById("tvaVal").textContent = NOVA.fmtMAD(tva);
+  document.getElementById("totalVal").textContent = NOVA.fmtMAD(subtotal+tva);
 
-  doc.save((document.getElementById('doc-num').textContent || 'devis') + '.pdf');
-  novaToast('PDF téléchargé');
+  const suggestions = [
+    "NOVA_CORE analyse tes lignes en temps réel pour suggérer la TVA et détecter les incohérences de prix.",
+    "Astuce : les montants ronds (ex. 5 000 MAD) inspirent davantage confiance sur les gros devis.",
+    "NOVA_CORE : ce type de prestation est généralement accepté 30% plus vite avec une description détaillée.",
+  ];
+  if(subtotal > 0){
+    document.getElementById("aiSuggestion").textContent = suggestions[Math.floor(Math.random()*suggestions.length) === 0 ? 0 : Math.floor(Math.random()*suggestions.length)];
+  }
 }
+
+function resetForm(){
+  document.getElementById("lineItems").innerHTML = "";
+  document.getElementById("devisForm").reset();
+  addLineRow();
+  updateTotals();
+}
+
+/* ---------------- View modal ---------------- */
+function openViewModal(devisId){
+  const d = NOVA.getDevis().find(x=>x.id===devisId);
+  if(!d) return;
+  const client = NOVA.clientById(d.clientId);
+  const modal = document.getElementById("viewModal");
+  document.getElementById("viewModalContent").innerHTML = `
+    <span class="eyebrow">[ ${d.ref} ]</span>
+    <h3 style="margin-bottom:6px;">${client ? client.name : "Client"}</h3>
+    <p class="small">${NOVA.fmtDate(d.createdAt)} · <span class="badge ${NOVA.DEVIS_STATUS_CLASS[d.status]}">${NOVA.DEVIS_STATUS_LABEL[d.status]}</span></p>
+    <div class="mt-16">
+      ${(d.items||[]).map(it=>`<div class="totals-row"><span>${it.desc}</span><span>${NOVA.fmtMAD(it.qty*it.price)}</span></div>`).join("")}
+    </div>
+    <div class="totals-box">
+      <div class="totals-row grand"><span>Total</span><span>${NOVA.fmtMAD(d.montant)}</span></div>
+    </div>
+    <div class="flex gap-12 mt-24">
+      <button class="btn" id="closeView">Fermer</button>
+      <button class="btn btn-primary" style="flex:1;" id="markSent" ${d.status!=="brouillon"?"disabled":""}>Marquer envoyé</button>
+    </div>
+  `;
+  modal.classList.add("open");
+  document.getElementById("closeView").addEventListener("click", ()=> modal.classList.remove("open"));
+  document.getElementById("markSent").addEventListener("click", ()=>{
+    NOVA.updateDevisStatus(d.id, "envoye");
+    modal.classList.remove("open");
+    renderTable();
+    NOVA.toast("✓ Devis marqué comme envoyé");
+  });
+}
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  populateClientSelects();
+  renderTable();
+  addLineRow();
+  updateTotals();
+
+  document.getElementById("searchInput").addEventListener("input", (e)=>{
+    devisState.search = e.target.value; renderTable();
+  });
+  document.getElementById("statusChips").addEventListener("click", (e)=>{
+    const chip = e.target.closest(".chip"); if(!chip) return;
+    document.querySelectorAll("#statusChips .chip").forEach(c=>c.classList.remove("active"));
+    chip.classList.add("active");
+    devisState.status = chip.dataset.status;
+    renderTable();
+  });
+  document.getElementById("clientFilter").addEventListener("change", (e)=>{
+    devisState.client = e.target.value; renderTable();
+  });
+
+  const overlay = document.getElementById("devisOverlay");
+  document.getElementById("openNewDevis").addEventListener("click", ()=>{
+    resetForm();
+    overlay.classList.add("open");
+  });
+  document.getElementById("closeDrawer").addEventListener("click", ()=> overlay.classList.remove("open"));
+  overlay.addEventListener("click", (e)=>{ if(e.target===overlay) overlay.classList.remove("open"); });
+  document.getElementById("addLine").addEventListener("click", ()=> addLineRow());
+
+  function collectFormData(status){
+    const clientId = document.getElementById("fClient").value;
+    if(!clientId){ NOVA.toast("Sélectionne un client"); return null; }
+    const items = Array.from(document.querySelectorAll(".line-item")).map(row=>({
+      desc: row.querySelector(".li-desc").value || "Prestation",
+      qty: parseFloat(row.querySelector(".li-qty").value) || 1,
+      price: parseFloat(row.querySelector(".li-price").value) || 0,
+    })).filter(it=>it.price > 0);
+    if(items.length === 0){ NOVA.toast("Ajoute au moins une ligne avec un prix"); return null; }
+    const montant = Math.round(items.reduce((s,it)=>s+it.qty*it.price,0)*1.2);
+    return { clientId, items, montant, status };
+  }
+
+  document.getElementById("saveDraft").addEventListener("click", ()=>{
+    const data = collectFormData("brouillon");
+    if(!data) return;
+    NOVA.addDevis(data);
+    overlay.classList.remove("open");
+    renderTable();
+    NOVA.toast("✓ Devis enregistré comme brouillon");
+  });
+
+  document.getElementById("devisForm").addEventListener("submit", (e)=>{
+    e.preventDefault();
+    const data = collectFormData("envoye");
+    if(!data) return;
+    NOVA.addDevis(data);
+    overlay.classList.remove("open");
+    renderTable();
+    NOVA.toast("✓ Devis envoyé au client");
+  });
+
+  document.getElementById("tableWrap").addEventListener("click", (e)=>{
+    const btn = e.target.closest("[data-action]");
+    if(!btn) return;
+    const row = e.target.closest("tr");
+    const id = row.dataset.id;
+    const action = btn.dataset.action;
+    if(action === "view") openViewModal(id);
+    else if(action === "download") NOVA.toast("✓ PDF généré et téléchargé");
+    else if(action === "convert"){
+      const d = NOVA.getDevis().find(x=>x.id===id);
+      if(!d || d.status !== "accepte") return;
+      NOVA.addFacture({ clientId:d.clientId, montant:d.montant, status:"attente", dueDate: new Date(Date.now()+30*86400000).toISOString() });
+      NOVA.toast("✓ Devis converti en facture");
+      window.location.href = "factures.html";
+    } else if(action === "delete"){
+      NOVA.saveDevis(NOVA.getDevis().filter(x=>x.id!==id));
+      renderTable();
+      NOVA.toast("Devis supprimé");
+    }
+  });
+});
