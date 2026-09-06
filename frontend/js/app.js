@@ -1,179 +1,245 @@
-/* =========================================================
-   NOVA — shared app behaviour (all pages)
-   ========================================================= */
+/* ==========================================================================
+   NOVA // DEVIS — SHARED APP LOGIC
+   Mock data store persisted in localStorage so devis/factures/clients stay
+   consistent across pages. Swap NOVA.api.* for real backend calls later.
+   ========================================================================== */
 
-// ---------- Theme ----------
-(function initTheme(){
-  const saved = localStorage.getItem('nova_theme');
-  if(saved) document.documentElement.setAttribute('data-theme', saved);
+const NOVA = (() => {
+
+  const KEYS = { clients:"nova_clients", devis:"nova_devis", factures:"nova_factures", seeded:"nova_seeded" };
+
+  const FIRST_NAMES = ["Yassine","Sara","Karim","Imane","Othmane","Nadia","Reda","Salma","Hamza","Lina"];
+  const COMPANIES = ["Atlas Digital","Groupe Meknassi","Cedrattine SARL","Nova Textile","Riad Consulting",
+    "Blue Ocean Import","Fes Mecanique","Sahara Energy","Casa Print", "Marrakech Retail"];
+  const CITIES = ["Casablanca","Rabat","Marrakech","Fès","Tanger","Agadir","Meknès"];
+
+  function uid(prefix){ return prefix + "-" + Math.random().toString(36).slice(2,8).toUpperCase(); }
+  function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function fmtMAD(n){ return n.toLocaleString("fr-FR",{maximumFractionDigits:0}) + " MAD"; }
+  function fmtDate(d){ return new Date(d).toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"}); }
+  function daysBetween(a,b){ return Math.round((new Date(a)-new Date(b))/86400000); }
+
+  function seed(){
+    if(localStorage.getItem(KEYS.seeded)) return;
+
+    const clients = COMPANIES.map((name,i)=>({
+      id: uid("CLI"),
+      name,
+      contact: pick(FIRST_NAMES) + " " + pick(FIRST_NAMES),
+      ice: "0021-" + randInt(1000,9999) + "-" + randInt(1000,9999),
+      email: name.toLowerCase().replace(/[^a-z]+/g,"") + "@exemple.ma",
+      phone: "06" + randInt(10000000,99999999),
+      city: pick(CITIES),
+      createdAt: new Date(Date.now() - randInt(30,600)*86400000).toISOString(),
+    }));
+    localStorage.setItem(KEYS.clients, JSON.stringify(clients));
+
+    const devisStatuses = ["brouillon","envoye","accepte","refuse"];
+    const devis = [];
+    for(let i=0;i<18;i++){
+      const client = pick(clients);
+      const montant = randInt(1800,42000);
+      devis.push({
+        id: uid("DEV"),
+        ref: "DEV-2026-" + String(140+i).padStart(4,"0"),
+        clientId: client.id,
+        montant,
+        status: devisStatuses[randInt(0,3)],
+        createdAt: new Date(Date.now() - randInt(0,90)*86400000).toISOString(),
+        items: [
+          { desc:"Prestation de développement", qty:1, price: Math.round(montant*.6) },
+          { desc:"Accompagnement & support", qty:1, price: Math.round(montant*.4) },
+        ],
+      });
+    }
+    localStorage.setItem(KEYS.devis, JSON.stringify(devis));
+
+    const facStatuses = ["payee","attente","retard"];
+    const factures = [];
+    for(let i=0;i<14;i++){
+      const client = pick(clients);
+      const montant = randInt(2200,38000);
+      const status = facStatuses[randInt(0,2)];
+      const due = new Date(Date.now() + (status==="retard" ? -randInt(1,20) : randInt(1,30))*86400000);
+      factures.push({
+        id: uid("FAC"),
+        ref: "FAC-2026-" + String(80+i).padStart(4,"0"),
+        clientId: client.id,
+        montant,
+        status,
+        dueDate: due.toISOString(),
+        createdAt: new Date(Date.now() - randInt(0,90)*86400000).toISOString(),
+      });
+    }
+    localStorage.setItem(KEYS.factures, JSON.stringify(factures));
+    localStorage.setItem(KEYS.seeded, "1");
+  }
+
+  function getClients(){ return JSON.parse(localStorage.getItem(KEYS.clients) || "[]"); }
+  function getDevis(){ return JSON.parse(localStorage.getItem(KEYS.devis) || "[]"); }
+  function getFactures(){ return JSON.parse(localStorage.getItem(KEYS.factures) || "[]"); }
+  function saveClients(v){ localStorage.setItem(KEYS.clients, JSON.stringify(v)); }
+  function saveDevis(v){ localStorage.setItem(KEYS.devis, JSON.stringify(v)); }
+  function saveFactures(v){ localStorage.setItem(KEYS.factures, JSON.stringify(v)); }
+
+  function clientById(id){ return getClients().find(c=>c.id===id); }
+
+  function addClient(data){
+    const clients = getClients();
+    const c = { id: uid("CLI"), createdAt: new Date().toISOString(), ...data };
+    clients.unshift(c);
+    saveClients(clients);
+    return c;
+  }
+  function addDevis(data){
+    const list = getDevis();
+    const d = { id: uid("DEV"), ref:"DEV-2026-" + String(200+list.length).padStart(4,"0"),
+      status:"brouillon", createdAt:new Date().toISOString(), ...data };
+    list.unshift(d);
+    saveDevis(list);
+    return d;
+  }
+  function addFacture(data){
+    const list = getFactures();
+    const f = { id: uid("FAC"), ref:"FAC-2026-" + String(100+list.length).padStart(4,"0"),
+      status:"attente", createdAt:new Date().toISOString(), ...data };
+    list.unshift(f);
+    saveFactures(list);
+    return f;
+  }
+  function updateDevisStatus(id, status){
+    const list = getDevis().map(d=> d.id===id ? {...d, status} : d);
+    saveDevis(list);
+  }
+  function updateFactureStatus(id, status){
+    const list = getFactures().map(f=> f.id===id ? {...f, status} : f);
+    saveFactures(list);
+  }
+
+  const DEVIS_STATUS_LABEL = { brouillon:"Brouillon", envoye:"Envoyé", accepte:"Accepté", refuse:"Refusé" };
+  const DEVIS_STATUS_CLASS = { brouillon:"gray", envoye:"blue", accepte:"green", refuse:"red" };
+  const FAC_STATUS_LABEL = { payee:"Payée", attente:"En attente", retard:"En retard" };
+  const FAC_STATUS_CLASS = { payee:"green", attente:"blue", retard:"red" };
+
+  /* ---------------- Icons ---------------- */
+  const ICONS = {
+    search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/>',
+    plus:'<path d="M12 5v14M5 12h14"/>',
+    eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+    edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    download:'<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
+    check:'<path d="M20 6 9 17l-5-5"/>',
+    x:'<path d="M18 6 6 18M6 6l12 12"/>',
+    trash:'<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 15H6L5 6"/>',
+    convert:'<path d="M7 7h10M7 7l3-3M7 7l3 3"/><path d="M17 17H7M17 17l-3 3M17 17l-3-3"/>',
+    sparkles:'<path d="m12 3 1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5Z"/>',
+    users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.7"/><path d="M15.5 13.2c2.6.5 4.3 2.4 4.3 5.3"/>',
+    invoice:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+    quote:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+    dashboard:'<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>',
+    building:'<path d="M6 22V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v18"/><path d="M2 22h20M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1"/>',
+    menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
+  };
+  function icon(name, size=16){
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||""}</svg>`;
+  }
+
+  /* ---------------- Toasts ---------------- */
+  function toast(message){
+    let stack = document.querySelector(".toast-stack");
+    if(!stack){ stack = document.createElement("div"); stack.className="toast-stack"; document.body.appendChild(stack); }
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = `<span class="tick">${icon("check",11)}</span><span>${message}</span>`;
+    stack.appendChild(el);
+    setTimeout(()=>{ el.classList.add("leaving"); setTimeout(()=>el.remove(),300); }, 3000);
+  }
+
+  /* ---------------- Blueprint decorative background ---------------- */
+  function paintBlueprint(container, density=0.12){
+    if(!container) return;
+    const grid = document.createElement("div");
+    grid.className = "bp-grid";
+    container.appendChild(grid);
+    const w = container.offsetWidth || 1200;
+    const h = container.offsetHeight || 600;
+    const cols = Math.floor(w/64), rows = Math.floor(h/64);
+    for(let r=1;r<rows;r++){
+      for(let c=1;c<cols;c++){
+        if(Math.random() > density) continue;
+        const p = document.createElement("div");
+        p.className = "bp-plus";
+        p.style.left = (c*64)+"px";
+        p.style.top = (r*64)+"px";
+        p.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v16M4 12h16"/></svg>`;
+        container.appendChild(p);
+      }
+    }
+  }
+
+  /* ---------------- Scroll reveal ---------------- */
+  function initReveal(){
+    const targets = document.querySelectorAll(".reveal");
+    if(!("IntersectionObserver" in window) || targets.length===0){ targets.forEach(t=>t.classList.add("in-view")); return; }
+    const obs = new IntersectionObserver(entries=>{
+      entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add("in-view"); obs.unobserve(e.target);} });
+    }, {threshold:.12});
+    targets.forEach(t=>obs.observe(t));
+  }
+
+  /* ---------------- Mobile nav ---------------- */
+  function initNav(){
+    const burger = document.querySelector(".nav-burger");
+    const links = document.querySelector(".nav-links");
+    if(burger && links){
+      burger.addEventListener("click", ()=>{
+        const open = links.style.display === "flex";
+        links.style.display = open ? "" : "flex";
+        links.style.cssText += open ? "" : "position:absolute;top:100%;left:0;right:0;flex-direction:column;background:var(--bg);padding:16px 24px;border-bottom:1px solid var(--line-strong);gap:4px;z-index:50;";
+      });
+    }
+  }
+
+  /* ---------------- Theme (dark default, light on request) ---------------- */
+  const THEME_KEY = "nova_theme";
+  const SUN_ICON = '<path d="M12 4V2M12 22v-2M4.9 4.9 3.5 3.5M20.5 20.5l-1.4-1.4M4 12H2M22 12h-2M4.9 19.1l-1.4 1.4M20.5 3.5l-1.4 1.4"/><circle cx="12" cy="12" r="4.5"/>';
+  const MOON_ICON = '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/>';
+  function paintThemeIcons(theme){
+    document.querySelectorAll(".theme-toggle").forEach(btn=>{
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${theme==="light"?SUN_ICON:MOON_ICON}</svg>`;
+      btn.setAttribute("aria-label", theme==="light" ? "Passer au thème sombre" : "Passer au thème clair");
+      btn.title = theme==="light" ? "Thème sombre" : "Thème clair";
+    });
+  }
+  function initTheme(){
+    const saved = localStorage.getItem(THEME_KEY) || "dark"; // NOVA is dark-first by brand
+    document.documentElement.setAttribute("data-theme", saved);
+    paintThemeIcons(saved);
+    document.querySelectorAll(".theme-toggle").forEach(btn=>{
+      btn.addEventListener("click", toggleTheme);
+    });
+  }
+  function toggleTheme(){
+    const current = document.documentElement.getAttribute("data-theme") || "dark";
+    const next = current === "light" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem(THEME_KEY, next);
+    paintThemeIcons(next);
+  }
+
+  return {
+    KEYS, seed, getClients, getDevis, getFactures, saveClients, saveDevis, saveFactures,
+    clientById, addClient, addDevis, addFacture, updateDevisStatus, updateFactureStatus,
+    DEVIS_STATUS_LABEL, DEVIS_STATUS_CLASS, FAC_STATUS_LABEL, FAC_STATUS_CLASS,
+    icon, toast, paintBlueprint, initReveal, initNav, initTheme, toggleTheme,
+    fmtMAD, fmtDate, daysBetween, uid, randInt, pick,
+  };
 })();
 
-function novaToggleTheme(){
-  const html = document.documentElement;
-  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  if(next === 'dark') html.setAttribute('data-theme','dark'); else html.removeAttribute('data-theme');
-  localStorage.setItem('nova_theme', next);
-}
-
-// ---------- Icons (local, no CDN dependency) ----------
-function novaIcons(){
-  document.querySelectorAll('[data-lucide]').forEach(el => {
-    const name = el.getAttribute('data-lucide');
-    const paths = window.NOVA_ICON_PATHS && NOVA_ICON_PATHS[name];
-    if(!paths) return;
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('width', '18');
-    svg.setAttribute('height', '18');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-width', '2');
-    svg.setAttribute('stroke-linecap', 'round');
-    svg.setAttribute('stroke-linejoin', 'round');
-    if(el.className) svg.setAttribute('class', el.className);
-    if(el.getAttribute('style')) svg.setAttribute('style', el.getAttribute('style'));
-    svg.innerHTML = paths;
-    el.replaceWith(svg);
-  });
-}
-
-// ---------- Scroll reveal (landing page feature cards etc.) ----------
-function novaInitReveal(){
-  const items = document.querySelectorAll('.reveal');
-  if(!items.length) return;
-  if(!('IntersectionObserver' in window)){
-    items.forEach(el => el.classList.add('in-view'));
-    return;
-  }
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if(entry.isIntersecting){
-        entry.target.classList.add('in-view');
-        io.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.15 });
-  items.forEach((el, i) => {
-    el.style.transitionDelay = (i % 3) * 70 + 'ms';
-    io.observe(el);
-  });
-}
-
-// ---------- Toasts ----------
-function novaToast(msg){
-  let stack = document.querySelector('.toast-stack');
-  if(!stack){
-    stack = document.createElement('div');
-    stack.className = 'toast-stack';
-    document.body.appendChild(stack);
-  }
-  const el = document.createElement('div');
-  el.className = 'toast';
-  el.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg><span>${msg}</span>`;
-  stack.appendChild(el);
-  setTimeout(() => {
-    el.style.transition = 'opacity .25s ease, transform .25s ease';
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(6px)';
-    setTimeout(() => el.remove(), 250);
-  }, 2600);
-}
-
-// ---------- Count-up numbers ----------
-function novaCountUp(el, end, opts = {}){
-  const dur = opts.duration || 900;
-  const isMoney = !!opts.money;
-  const start = 0;
-  const startTime = performance.now();
-  function step(now){
-    const p = Math.min(1, (now - startTime) / dur);
-    const eased = 1 - Math.pow(1 - p, 3);
-    const val = start + (end - start) * eased;
-    el.textContent = isMoney ? NOVA.fmt(val) : NOVA.fmtNum(val);
-    if(p < 1) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-}
-
-// ---------- Command palette ----------
-const NOVA_COMMANDS = [
-  { label: 'Créer un devis', icon: 'file-plus-2', href: 'devis.html?new=1' },
-  { label: 'Créer une facture', icon: 'receipt', href: 'factures.html?new=1' },
-  { label: 'Ajouter un client', icon: 'user-plus', href: 'clients.html?new=1' },
-  { label: 'Voir les impayés', icon: 'alert-triangle', href: 'factures.html?filter=impayes' },
-  { label: 'Ouvrir le tableau de bord', icon: 'layout-dashboard', href: 'dashboard.html' },
-  { label: 'Voir les clients', icon: 'users', href: 'clients.html' },
-  { label: 'Ouvrir les paramètres', icon: 'settings', href: 'settings.html' },
-  { label: 'Analyser mon activité', icon: 'sparkles', href: 'dashboard.html#analyse' }
-];
-
-function novaBuildPalette(){
-  if(document.querySelector('.cmdk-overlay')) return;
-  const overlay = document.createElement('div');
-  overlay.className = 'cmdk-overlay';
-  overlay.innerHTML = `
-    <div class="cmdk">
-      <div class="cmdk-input">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" placeholder="Rechercher ou exécuter une action..." autocomplete="off" />
-      </div>
-      <div class="cmdk-list"></div>
-    </div>`;
-  document.body.appendChild(overlay);
-
-  const input = overlay.querySelector('input');
-  const list = overlay.querySelector('.cmdk-list');
-  let selected = 0;
-
-  function render(filter=''){
-    const items = NOVA_COMMANDS.filter(c => c.label.toLowerCase().includes(filter.toLowerCase()));
-    list.innerHTML = items.map((c,i) => `
-      <div class="cmdk-item ${i===selected?'sel':''}" data-href="${c.href}">
-        <i data-lucide="${c.icon}"></i><span>${c.label}</span>
-      </div>`).join('') || `<div class="cmdk-group-label">Aucun résultat</div>`;
-    novaIcons();
-    list.querySelectorAll('.cmdk-item').forEach(el => {
-      el.addEventListener('click', () => { window.location.href = el.dataset.href; });
-    });
-  }
-
-  function open(){
-    overlay.classList.add('open');
-    selected = 0;
-    input.value = '';
-    render();
-    setTimeout(() => input.focus(), 50);
-  }
-  function close(){ overlay.classList.remove('open'); }
-
-  overlay.addEventListener('click', (e) => { if(e.target === overlay) close(); });
-  input.addEventListener('input', () => { selected = 0; render(input.value); });
-  document.addEventListener('keydown', (e) => {
-    if((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k'){
-      e.preventDefault();
-      overlay.classList.contains('open') ? close() : open();
-    }
-    if(e.key === 'Escape') close();
-  });
-
-  document.querySelectorAll('[data-cmdk-trigger]').forEach(t => t.addEventListener('click', open));
-}
-
-// ---------- Quick create (sidebar) ----------
-function novaToggleQuickCreate(){
-  const menu = document.getElementById('quick-create-menu');
-  if(!menu) return;
-  menu.classList.toggle('open');
-}
-document.addEventListener('click', (e) => {
-  const wrap = document.getElementById('quick-create');
-  const menu = document.getElementById('quick-create-menu');
-  if(!wrap || !menu) return;
-  if(!wrap.contains(e.target)) menu.classList.remove('open');
+document.addEventListener("DOMContentLoaded", ()=>{
+  NOVA.seed();
+  NOVA.initTheme();
+  NOVA.initNav();
+  NOVA.initReveal();
 });
-
-document.addEventListener('DOMContentLoaded', () => {
-  novaIcons();
-  novaBuildPalette();
-  novaInitReveal();
-});       
