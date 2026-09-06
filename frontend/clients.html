@@ -3,96 +3,112 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Clients — NOVA</title>
+<title>Clients — NOVA // DEVIS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/app.css">
+<style>
+  .client-card{cursor:pointer;}
+  .client-avatar{width:38px;height:38px;border:1px solid var(--line-strong);display:flex;align-items:center;justify-content:center;
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;color:var(--accent);margin-bottom:14px;}
+  .client-stats{display:flex;gap:18px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);}
+  .client-stats div{font-size:11px;color:var(--muted-2);}
+  .client-stats b{display:block;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--ink);font-weight:700;margin-bottom:2px;}
+</style>
 </head>
 <body>
-<div class="app-shell">
 
-  <aside class="sidebar">
-    <a href="index.html" class="brand"><span class="brand-mark"></span>NOVA</a>
-    <div class="side-search" data-cmdk-trigger><i data-lucide="search"></i> Rechercher... <kbd>⌘K</kbd></div>
-    <nav class="side-nav">
-      <a href="dashboard.html"><i data-lucide="layout-dashboard"></i>Dashboard</a>
-      <a href="clients.html" class="active"><i data-lucide="users"></i>Clients</a>
-      <a href="devis.html"><i data-lucide="file-text"></i>Devis</a>
-      <a href="factures.html"><i data-lucide="receipt"></i>Factures</a>
-      <a href="produits.html"><i data-lucide="package"></i>Produits</a>
-      <a href="paiements.html"><i data-lucide="credit-card"></i>Paiements</a>
-      <a href="depenses.html"><i data-lucide="wallet"></i>Dépenses</a>
-      <a href="rendezvous.html"><i data-lucide="calendar"></i>Rendez-vous</a>
-      <div class="side-sep"></div>
-      <a href="settings.html"><i data-lucide="settings"></i>Paramètres</a>
-      <a href="#"><i data-lucide="help-circle"></i>Aide</a>
+<div class="stage">
+  <header class="nav">
+    <a href="index.html" class="logo">NOVA // DEVIS</a>
+    <nav class="nav-links">
+      <a href="devis.html">01. DEVIS</a>
+      <a href="factures.html">02. FACTURES</a>
+      <a href="clients.html" class="active">03. CLIENTS</a>
+      <a href="dashboard.html">04. DASHBOARD</a>
     </nav>
-    <div class="side-foot">
-      <button class="theme-toggle" style="align-self:flex-start;margin-bottom:6px;" onclick="novaToggleTheme()"><i data-lucide="moon" class="icon-moon"></i><i data-lucide="sun" class="icon-sun"></i></button>
-      <div class="user-chip"><div class="avatar">AH</div><div><div class="u-name">Ahmed</div><div class="u-role">Atlas Climatisation</div></div></div>
+    <div class="nav-right">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+      <span>ICE 0021-4587-9600</span>
+      <span class="tag">[ CONNECTÉ ]</span>
+      <span>STATUT:</span>
+      <span class="pill">COMPTE PRO</span>
     </div>
-  </aside>
+    <button class="nav-burger"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  </header>
 
-  <main class="main">
-
-    <div id="view-list">
-      <div class="topbar">
-        <h1>Clients</h1>
-        <div class="topbar-actions">
-          <button class="btn btn-primary btn-sm" onclick="novaNewClient()"><i data-lucide="user-plus"></i>Ajouter un client</button>
+  <div class="wrap">
+    <div class="page-head reveal">
+      <span class="eyebrow">[ CLIENTS ]</span>
+      <div class="page-head-row">
+        <div>
+          <h1>Ton répertoire clients.</h1>
+          <p class="sub">Retrouve chaque client, son historique de devis et factures, en un clic.</p>
         </div>
-      </div>
-
-      <div class="toolbar">
-        <div class="search-box"><i data-lucide="search"></i><input type="text" id="client-search" placeholder="Rechercher un client..."></div>
-        <div class="filter-chip"><i data-lucide="filter"></i>Type</div>
-      </div>
-
-      <div class="panel" style="padding:0;">
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead><tr><th>Nom</th><th>Téléphone</th><th>Email</th><th style="text-align:right;">Facturé</th><th style="text-align:right;">Factures</th><th>Dernière activité</th></tr></thead>
-            <tbody id="client-tbody"></tbody>
-          </table>
-        </div>
+        <button class="btn btn-primary" id="openNewClient">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Nouveau client
+        </button>
       </div>
     </div>
 
-    <div id="view-detail" style="display:none;">
-      <button class="btn btn-ghost btn-sm" style="margin-bottom:16px;" onclick="novaCloseDetail()"><i data-lucide="arrow-left"></i>Retour aux clients</button>
-      <div class="client-hero">
-        <div class="avatar" id="cd-avatar">—</div>
-        <div><h1 id="cd-name">—</h1><p id="cd-contact">—</p></div>
-      </div>
-      <div class="stat-row">
-        <div class="stat-box"><div class="s-label">Total facturé</div><div class="s-val" id="cd-total">0 DH</div></div>
-        <div class="stat-box"><div class="s-label">Payé</div><div class="s-val" style="color:var(--success)" id="cd-paid">0 DH</div></div>
-        <div class="stat-box"><div class="s-label">Impayé</div><div class="s-val" style="color:var(--warning)" id="cd-unpaid">0 DH</div></div>
-      </div>
-      <div class="panel" style="padding:0;">
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead><tr><th>Type</th><th>N°</th><th>Date</th><th style="text-align:right;">Montant</th><th>Statut</th></tr></thead>
-            <tbody id="cd-history"></tbody>
-          </table>
-        </div>
+    <div class="toolbar reveal">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="Rechercher un client, une ville, un ICE…">
       </div>
     </div>
 
-  </main>
+    <div id="clientsWrap" style="margin:24px 0 60px;"></div>
+  </div>
 </div>
 
-<nav class="mobile-nav">
-  <a href="dashboard.html"><i data-lucide="layout-dashboard"></i>Accueil</a>
-  <a href="clients.html" class="active"><i data-lucide="users"></i>Clients</a>
-  <a href="devis.html"><i data-lucide="file-text"></i>Devis</a>
-  <a href="factures.html"><i data-lucide="receipt"></i>Factures</a>
-  <a href="settings.html"><i data-lucide="more-horizontal"></i>Plus</a>
-</nav>
+<!-- New client modal -->
+<div class="modal-center" id="clientModal">
+  <div class="modal-box">
+    <span class="eyebrow" style="margin-bottom:6px;">[ NOUVEAU CLIENT ]</span>
+    <h3 style="margin-bottom:18px;">Ajouter un client</h3>
+    <form id="clientForm">
+      <div class="field">
+        <label>Nom de l'entreprise</label>
+        <input type="text" id="cName" placeholder="Ex : Atlas Digital" required>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Contact</label>
+          <input type="text" id="cContact" placeholder="Nom du contact">
+        </div>
+        <div class="field">
+          <label>ICE</label>
+          <input type="text" id="cIce" placeholder="0021-XXXX-XXXX">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>E-mail</label>
+          <input type="email" id="cEmail" placeholder="contact@entreprise.ma">
+        </div>
+        <div class="field">
+          <label>Ville</label>
+          <select id="cCity">
+            <option>Casablanca</option><option>Rabat</option><option>Marrakech</option>
+            <option>Fès</option><option>Tanger</option><option>Agadir</option><option>Meknès</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-12 mt-24">
+        <button type="button" class="btn" id="cancelClient">Annuler</button>
+        <button type="submit" class="btn btn-primary" style="flex:1;">Ajouter le client</button>
+      </div>
+    </form>
+  </div>
+</div>
 
-<script src="js/data.js"></script>
-<script src="js/icons.js"></script>
+<!-- Client detail modal -->
+<div class="modal-center" id="detailModal">
+  <div class="modal-box" id="detailContent" style="max-width:520px;"></div>
+</div>
+
 <script src="js/app.js"></script>
 <script src="js/clients.js"></script>
 </body>
