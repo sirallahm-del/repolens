@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Devis — NOVA // DEVIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="stage">
+  <header class="nav">
+    <a href="index.html" class="logo">NOVA // DEVIS</a>
+    <nav class="nav-links">
+      <a href="devis.html" class="active">01. DEVIS</a>
+      <a href="factures.html">02. FACTURES</a>
+      <a href="clients.html">03. CLIENTS</a>
+      <a href="dashboard.html">04. DASHBOARD</a>
+    </nav>
+    <div class="nav-right">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+      <span>ICE 0021-4587-9600</span>
+      <span class="tag">[ CONNECTÉ ]</span>
+      <span>STATUT:</span>
+      <span class="pill">COMPTE PRO</span>
+      <button class="theme-toggle" aria-label="Changer de thème"></button>
+    </div>
+    <button class="nav-burger"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  </header>
+
+  <div class="wrap">
+    <div class="page-head reveal">
+      <span class="eyebrow">[ DEVIS ]</span>
+      <div class="page-head-row">
+        <div>
+          <h1>Vos devis, clairs et sous contrôle.</h1>
+          <p class="sub">Crée, envoie et suis chaque devis jusqu'à sa transformation en facture.</p>
+        </div>
+        <button class="btn btn-primary" id="openNewDevis">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Nouveau devis
+        </button>
+      </div>
+    </div>
+
+    <div class="toolbar reveal">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="Rechercher par référence ou client…">
+      </div>
+      <div class="filter-chips" id="statusChips">
+        <button class="chip active" data-status="all">Tous</button>
+        <button class="chip" data-status="brouillon">Brouillon</button>
+        <button class="chip" data-status="envoye">Envoyé</button>
+        <button class="chip" data-status="accepte">Accepté</button>
+        <button class="chip" data-status="refuse">Refusé</button>
+      </div>
+      <select class="select" id="clientFilter"><option value="">Tous les clients</option></select>
+    </div>
+
+    <div id="tableWrap"></div>
+  </div>
+</div>
+
+<!-- New devis drawer -->
+<div class="overlay" id="devisOverlay">
+  <div class="drawer">
+    <div class="drawer-head">
+      <div>
+        <span class="eyebrow" style="margin-bottom:6px;">[ NOUVEAU DEVIS ]</span>
+        <h3>Créer un devis</h3>
+      </div>
+      <button class="drawer-close" id="closeDrawer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <form id="devisForm">
+      <div class="field">
+        <label>Client</label>
+        <select id="fClient" required><option value="">Choisir un client…</option></select>
+      </div>
+
+      <div class="field">
+        <label>Lignes de prestation</label>
+        <div id="lineItems"></div>
+        <span class="add-line" id="addLine">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Ajouter une ligne
+        </span>
+      </div>
+
+      <div class="ai-strip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m12 3 1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5Z"/></svg>
+        <p id="aiSuggestion">NOVA_CORE analyse tes lignes en temps réel pour suggérer la TVA et détecter les incohérences de prix.</p>
+      </div>
+
+      <div class="totals-box">
+        <div class="totals-row"><span>Sous-total</span><span id="subtotalVal">0 MAD</span></div>
+        <div class="totals-row"><span>TVA (20%)</span><span id="tvaVal">0 MAD</span></div>
+        <div class="totals-row grand"><span>Total</span><span id="totalVal">0 MAD</span></div>
+      </div>
+
+      <div class="flex gap-12 mt-24">
+        <button type="button" class="btn" id="saveDraft">Enregistrer brouillon</button>
+        <button type="submit" class="btn btn-primary" style="flex:1;">Envoyer au client</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Devis view modal -->
+<div class="modal-center" id="viewModal">
+  <div class="modal-box" id="viewModalContent"></div>
+</div>
+
+<script src="js/app.js"></script>
+<script src="js/devis.js"></script>
+</body>
+</html>

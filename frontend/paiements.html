@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paiements — NOVA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <aside class="sidebar">
+    <a href="index.html" class="brand"><span class="brand-mark"></span>NOVA</a>
+    <div class="side-search" data-cmdk-trigger><i data-lucide="search"></i> Rechercher... <kbd>⌘K</kbd></div>
+    <nav class="side-nav">
+      <a href="dashboard.html"><i data-lucide="layout-dashboard"></i>Dashboard</a>
+      <a href="clients.html"><i data-lucide="users"></i>Clients</a>
+      <a href="devis.html"><i data-lucide="file-text"></i>Devis</a>
+      <a href="factures.html"><i data-lucide="receipt"></i>Factures</a>
+      <a href="produits.html"><i data-lucide="package"></i>Produits</a>
+      <a href="paiements.html" class="active"><i data-lucide="credit-card"></i>Paiements</a>
+      <a href="depenses.html"><i data-lucide="wallet"></i>Dépenses</a>
+      <a href="rendezvous.html"><i data-lucide="calendar"></i>Rendez-vous</a>
+      <div class="side-sep"></div>
+      <a href="settings.html"><i data-lucide="settings"></i>Paramètres</a>
+      <a href="#"><i data-lucide="help-circle"></i>Aide</a>
+    </nav>
+    <div class="side-foot">
+      <button class="theme-toggle" style="align-self:flex-start;margin-bottom:6px;" onclick="novaToggleTheme()"><i data-lucide="moon" class="icon-moon"></i><i data-lucide="sun" class="icon-sun"></i></button>
+      <div class="user-chip"><div class="avatar">AH</div><div><div class="u-name">Ahmed</div><div class="u-role">Atlas Climatisation</div></div></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <h1>Paiements</h1>
+      <div class="topbar-actions">
+        <button class="btn btn-primary btn-sm" onclick="novaCreateLink()"><i data-lucide="link"></i>Créer un lien de paiement</button>
+      </div>
+    </div>
+
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
+      <div class="kpi-card">
+        <div class="kpi-top"><span class="kpi-label">Payé</span><span class="kpi-icon"><i data-lucide="check-circle"></i></span></div>
+        <div class="kpi-val" id="p-paid">0 DH</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-top"><span class="kpi-label">En attente</span><span class="kpi-icon" style="background:var(--accent-tint);"><i data-lucide="clock"></i></span></div>
+        <div class="kpi-val" id="p-pending">0 DH</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-top"><span class="kpi-label">En retard</span><span class="kpi-icon" style="background:var(--danger-tint);color:var(--danger);"><i data-lucide="alert-triangle"></i></span></div>
+        <div class="kpi-val" id="p-overdue">0 DH</div>
+      </div>
+    </div>
+
+    <div class="panel" style="padding:0;">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Facture</th><th>Client</th><th>Date</th><th style="text-align:right;">Montant</th><th>Statut</th></tr></thead>
+          <tbody id="pay-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<nav class="mobile-nav">
+  <a href="dashboard.html"><i data-lucide="layout-dashboard"></i>Accueil</a>
+  <a href="clients.html"><i data-lucide="users"></i>Clients</a>
+  <a href="devis.html"><i data-lucide="file-text"></i>Devis</a>
+  <a href="factures.html"><i data-lucide="receipt"></i>Factures</a>
+  <a href="settings.html"><i data-lucide="more-horizontal"></i>Plus</a>
+</nav>
+
+<script src="js/data.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const d = NOVA.data();
+  const statusClass = { 'Payée':'paid', 'En attente':'pending', 'En retard':'overdue' };
+  let paid=0, pending=0, overdue=0;
+  d.factures.forEach(f => {
+    const t = NOVA.docTotals(f.items).total;
+    if(f.status==='Payée') paid += t; else if(f.status==='En attente') pending += t; else overdue += t;
+  });
+  novaCountUp(document.getElementById('p-paid'), paid, { money:true });
+  novaCountUp(document.getElementById('p-pending'), pending, { money:true });
+  novaCountUp(document.getElementById('p-overdue'), overdue, { money:true });
+
+  document.getElementById('pay-tbody').innerHTML = d.factures.map(f => {
+    const c = NOVA.client(f.clientId);
+    const t = NOVA.docTotals(f.items).total;
+    return `<tr><td class="cell-primary">${f.id}</td><td>${c?c.name:'—'}</td><td class="cell-muted">${f.date.split('-').reverse().join('/')}</td><td class="cell-num">${NOVA.fmt(t)}</td><td><span class="status ${statusClass[f.status]}">${f.status}</span></td></tr>`;
+  }).join('');
+  novaIcons();
+});
+function novaCreateLink(){ novaToast('Lien de paiement copié dans le presse-papier'); }
+</script>
+</body>
+</html>
