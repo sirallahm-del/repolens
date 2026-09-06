@@ -3,174 +3,113 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard — NOVA</title>
+<title>Dashboard — NOVA // DEVIS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/app.css">
+<style>
+  .chart-card{position:relative;overflow:hidden;}
+  .chart-wrap{height:220px;display:flex;align-items:flex-end;gap:10px;margin-top:18px;padding:0 2px;}
+  .chart-wrap .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;}
+  .chart-wrap .bar{width:100%;background:linear-gradient(180deg,var(--accent),rgba(191,227,255,.18));transform-origin:bottom;
+    transform:scaleY(0);transition:transform 1s var(--ease);}
+  .chart-wrap .m-label{font-size:10.5px;color:var(--muted-2);}
+  .legend-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+  .activity-item{display:flex;gap:12px;padding:13px 0;border-bottom:1px solid var(--line);font-size:13px;}
+  .activity-item:last-child{border-bottom:none;}
+  .activity-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:5px;flex:none;}
+  .activity-item .t{color:var(--muted-2);font-size:11px;margin-top:3px;}
+  .due-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);}
+  .due-item:last-child{border-bottom:none;}
+  .due-badge{margin-left:auto;font-size:11px;}
+</style>
 </head>
 <body>
-<div class="app-shell">
 
-  <aside class="sidebar">
-    <a href="index.html" class="brand"><span class="brand-mark"></span>NOVA</a>
-    <div class="side-search" data-cmdk-trigger>
-      <i data-lucide="search"></i> Rechercher... <kbd>⌘K</kbd>
-    </div>
-    <nav class="side-nav">
-      <a href="dashboard.html" class="active"><i data-lucide="layout-dashboard"></i>Dashboard</a>
-      <a href="clients.html"><i data-lucide="users"></i>Clients</a>
-      <a href="devis.html"><i data-lucide="file-text"></i>Devis</a>
-      <a href="factures.html"><i data-lucide="receipt"></i>Factures</a>
-      <a href="produits.html"><i data-lucide="package"></i>Produits</a>
-      <a href="paiements.html"><i data-lucide="credit-card"></i>Paiements</a>
-      <a href="depenses.html"><i data-lucide="wallet"></i>Dépenses</a>
-      <a href="rendezvous.html"><i data-lucide="calendar"></i>Rendez-vous</a>
-      <div class="side-sep"></div>
-      <a href="settings.html"><i data-lucide="settings"></i>Paramètres</a>
-      <a href="#"><i data-lucide="help-circle"></i>Aide</a>
+<div class="stage">
+  <header class="nav">
+    <a href="index.html" class="logo">NOVA // DEVIS</a>
+    <nav class="nav-links">
+      <a href="devis.html">01. DEVIS</a>
+      <a href="factures.html">02. FACTURES</a>
+      <a href="clients.html">03. CLIENTS</a>
+      <a href="dashboard.html" class="active">04. DASHBOARD</a>
     </nav>
-    <div class="side-foot">
-      <button class="theme-toggle" style="align-self:flex-start;margin-bottom:6px;" onclick="novaToggleTheme()" aria-label="Changer le thème">
-        <i data-lucide="moon" class="icon-moon"></i><i data-lucide="sun" class="icon-sun"></i>
-      </button>
-      <div class="user-chip">
-        <div class="avatar">AH</div>
-        <div><div class="u-name">Ahmed</div><div class="u-role">Atlas Climatisation</div></div>
+    <div class="nav-right">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+      <span>ICE 0021-4587-9600</span>
+      <span class="tag">[ CONNECTÉ ]</span>
+      <span>STATUT:</span>
+      <span class="pill">COMPTE PRO</span>
+    </div>
+    <button class="nav-burger"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  </header>
+
+  <div class="wrap">
+    <div class="page-head reveal">
+      <span class="eyebrow">[ DASHBOARD ]</span>
+      <div class="page-head-row">
+        <div>
+          <h1>Vue d'ensemble de votre activité.</h1>
+          <p class="sub">Chiffre d'affaires, devis en attente et échéances à venir, en un coup d'œil.</p>
+        </div>
       </div>
     </div>
-  </aside>
 
-  <main class="main">
-    <div class="topbar">
+    <div class="kpi-strip reveal">
+      <div class="kpi">
+        <div class="k-label">CHIFFRE D'AFFAIRES (30J)</div>
+        <div class="k-value" id="kpiRevenue">—</div>
+        <div class="k-delta up">▲ 12% vs mois dernier</div>
+      </div>
+      <div class="kpi">
+        <div class="k-label">DEVIS EN ATTENTE</div>
+        <div class="k-value" id="kpiPendingDevis">—</div>
+        <div class="k-delta muted">à relancer</div>
+      </div>
+      <div class="kpi">
+        <div class="k-label">FACTURES EN RETARD</div>
+        <div class="k-value" id="kpiOverdue">—</div>
+        <div class="k-delta down" id="kpiOverdueAmount">—</div>
+      </div>
+      <div class="kpi">
+        <div class="k-label">TAUX DE CONVERSION</div>
+        <div class="k-value" id="kpiConversion">—</div>
+        <div class="k-delta muted">devis → facture</div>
+      </div>
+    </div>
+
+    <div class="grid-2 mt-32 reveal">
+      <div class="chart-card">
+        <div class="card-head">
+          <h3>Revenus des 6 derniers mois</h3>
+          <span class="badge blue">MAD</span>
+        </div>
+        <div class="chart-wrap" id="revenueChart"></div>
+      </div>
       <div>
-        <h1>Bonjour, Ahmed 👋</h1>
-        <p class="topbar-date" id="topbar-date"></p>
-      </div>
-      <div class="topbar-actions">
-        <a href="devis.html?new=1" class="btn btn-secondary btn-sm"><i data-lucide="file-plus-2"></i>Devis</a>
-        <a href="factures.html?new=1" class="btn btn-primary btn-sm"><i data-lucide="plus"></i>Nouvelle facture</a>
+        <div class="card-head"><h3>Activité récente</h3></div>
+        <div id="activityFeed"></div>
       </div>
     </div>
 
-    <div class="kpi-grid">
-      <div class="kpi-card reveal">
-        <div class="kpi-top"><span class="kpi-label">Revenus</span><span class="kpi-icon"><i data-lucide="trending-up"></i></span></div>
-        <div class="kpi-val" id="kpi-revenue">0 DH</div>
-        <div class="kpi-bottom">
-          <span class="kpi-delta up"><i data-lucide="arrow-up-right" style="width:12px;height:12px;"></i>+12.4%</span>
-          <svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline id="spark-revenue" points="0,25 20,20 40,22 60,12 80,14 100,4"/></svg>
-        </div>
+    <div class="grid-2 mt-32 reveal" style="margin-bottom:60px;">
+      <div>
+        <div class="card-head"><h3>Échéances à venir</h3></div>
+        <div id="upcomingDue"></div>
       </div>
-      <div class="kpi-card reveal">
-        <div class="kpi-top"><span class="kpi-label">Devis</span><span class="kpi-icon"><i data-lucide="file-text"></i></span></div>
-        <div class="kpi-val" id="kpi-devis">0</div>
-        <div class="kpi-bottom">
-          <span class="kpi-delta up"><i data-lucide="arrow-up-right" style="width:12px;height:12px;"></i>+3</span>
-          <svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline id="spark-devis" points="0,22 20,24 40,16 60,18 80,10 100,8"/></svg>
-        </div>
-      </div>
-      <div class="kpi-card reveal">
-        <div class="kpi-top"><span class="kpi-label">Factures</span><span class="kpi-icon"><i data-lucide="receipt"></i></span></div>
-        <div class="kpi-val" id="kpi-factures">0</div>
-        <div class="kpi-bottom">
-          <span class="kpi-delta up"><i data-lucide="arrow-up-right" style="width:12px;height:12px;"></i>+5</span>
-          <svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline id="spark-factures" points="0,20 20,15 40,18 60,9 80,13 100,6"/></svg>
-        </div>
-      </div>
-      <div class="kpi-card reveal">
-        <div class="kpi-top"><span class="kpi-label">Impayés</span><span class="kpi-icon" style="background:var(--warning-tint);color:var(--warning);"><i data-lucide="alert-triangle"></i></span></div>
-        <div class="kpi-val" id="kpi-unpaid">0 DH</div>
-        <div class="kpi-bottom">
-          <span class="kpi-delta down">3 en retard</span>
-          <svg class="sparkline warn" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline id="spark-unpaid" points="0,10 20,14 40,9 60,16 80,12 100,20"/></svg>
+      <div>
+        <div class="card-head"><h3>Actions rapides</h3></div>
+        <div class="flex" style="flex-direction:column;gap:10px;">
+          <a href="devis.html" class="btn btn-primary"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Nouveau devis</a>
+          <a href="factures.html" class="btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Nouvelle facture</a>
+          <a href="clients.html" class="btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Nouveau client</a>
         </div>
       </div>
     </div>
-
-    <div class="dash-grid">
-      <div class="panel chart-card reveal">
-        <div class="panel-head">
-          <h2>Revenus</h2>
-          <span class="link">7 derniers mois</span>
-        </div>
-        <div class="bars" id="revenue-bars"></div>
-      </div>
-
-      <div class="panel donut-card reveal">
-        <div class="panel-head"><h2>Répartition</h2></div>
-        <div class="donut-wrap">
-          <div class="donut-ring" id="donut-ring"></div>
-          <div class="donut-center">
-            <div class="donut-center-val" id="donut-center-val">—</div>
-            <div class="donut-center-lbl" id="donut-center-lbl">Catégorie phare</div>
-          </div>
-        </div>
-        <div class="donut-legend" id="donut-legend"></div>
-      </div>
-
-      <div class="ai-card reveal" id="analyse">
-        <h2>✨ Assistant NOVA</h2>
-        <p>Que voulez-vous faire ?</p>
-        <div class="ai-quick-actions">
-          <button onclick="location.href='devis.html?new=1'"><i data-lucide="file-plus-2"></i>Créer un devis</button>
-          <button onclick="location.href='factures.html?new=1'"><i data-lucide="receipt"></i>Créer une facture</button>
-          <button onclick="location.href='clients.html?new=1'"><i data-lucide="user-plus"></i>Ajouter un client</button>
-          <button onclick="novaShowAnalysis()"><i data-lucide="bar-chart-3"></i>Analyser mon activité</button>
-        </div>
-      </div>
-
-      <div class="panel appts-card reveal">
-        <div class="panel-head"><h2>Aujourd'hui</h2><a href="rendezvous.html" class="link">Voir tout</a></div>
-        <div class="mini-list" id="appt-list"></div>
-      </div>
-
-      <div class="panel clients-card reveal">
-        <div class="panel-head"><h2>Top clients</h2><a href="clients.html" class="link">Voir tout</a></div>
-        <div class="mini-list" id="top-clients-list"></div>
-      </div>
-    </div>
-
-    <div class="grid-2">
-      <div class="panel reveal">
-        <div class="panel-head">
-          <h2>Documents récents</h2>
-          <a href="factures.html" class="link">Voir tout</a>
-        </div>
-        <div class="table-wrap">
-          <table class="data-table" id="recent-table">
-            <thead><tr><th>N°</th><th>Client</th><th>Date</th><th style="text-align:right;">Montant</th><th>Statut</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="panel reveal" id="ai-insight-panel">
-        <div class="panel-head"><h2>Analyse NOVA AI</h2></div>
-        <p style="font-size:13.5px;line-height:1.6;">
-          Votre chiffre d'affaires a augmenté de <strong style="color:var(--success)">12.4%</strong> ce mois-ci.
-        </p>
-        <div style="background:var(--warning-tint);color:var(--warning);border-radius:9px;padding:11px 13px;font-size:13px;margin:14px 0 10px;">
-          ⚠️ Vous avez <strong id="unpaid-inline">8,400 DH</strong> d'impayés.
-        </div>
-        <div style="background:var(--accent-tint);color:var(--accent-ink);border-radius:9px;padding:11px 13px;font-size:13px;">
-          💡 Relancez les 3 clients dont les factures dépassent 30 jours.
-        </div>
-      </div>
-    </div>
-  </main>
+  </div>
 </div>
 
-<nav class="mobile-nav">
-  <a href="dashboard.html" class="active"><i data-lucide="layout-dashboard"></i>Accueil</a>
-  <a href="clients.html"><i data-lucide="users"></i>Clients</a>
-  <a href="devis.html"><i data-lucide="file-text"></i>Devis</a>
-  <a href="factures.html"><i data-lucide="receipt"></i>Factures</a>
-  <a href="settings.html"><i data-lucide="more-horizontal"></i>Plus</a>
-</nav>
-
-<script src="js/data.js"></script>
-<script src="js/icons.js"></script>
 <script src="js/app.js"></script>
 <script src="js/dashboard.js"></script>
 </body>
