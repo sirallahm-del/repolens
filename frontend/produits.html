@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Produits & Services — NOVA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <aside class="sidebar">
+    <a href="index.html" class="brand"><span class="brand-mark"></span>NOVA</a>
+    <div class="side-search" data-cmdk-trigger><i data-lucide="search"></i> Rechercher... <kbd>⌘K</kbd></div>
+    <nav class="side-nav">
+      <a href="dashboard.html"><i data-lucide="layout-dashboard"></i>Dashboard</a>
+      <a href="clients.html"><i data-lucide="users"></i>Clients</a>
+      <a href="devis.html"><i data-lucide="file-text"></i>Devis</a>
+      <a href="factures.html"><i data-lucide="receipt"></i>Factures</a>
+      <a href="produits.html" class="active"><i data-lucide="package"></i>Produits</a>
+      <a href="paiements.html"><i data-lucide="credit-card"></i>Paiements</a>
+      <a href="depenses.html"><i data-lucide="wallet"></i>Dépenses</a>
+      <a href="rendezvous.html"><i data-lucide="calendar"></i>Rendez-vous</a>
+      <div class="side-sep"></div>
+      <a href="settings.html"><i data-lucide="settings"></i>Paramètres</a>
+      <a href="#"><i data-lucide="help-circle"></i>Aide</a>
+    </nav>
+    <div class="side-foot">
+      <button class="theme-toggle" style="align-self:flex-start;margin-bottom:6px;" onclick="novaToggleTheme()"><i data-lucide="moon" class="icon-moon"></i><i data-lucide="sun" class="icon-sun"></i></button>
+      <div class="user-chip"><div class="avatar">AH</div><div><div class="u-name">Ahmed</div><div class="u-role">Atlas Climatisation</div></div></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <h1>Produits & Services</h1>
+      <div class="topbar-actions">
+        <button class="btn btn-primary btn-sm" onclick="novaNewProduct()"><i data-lucide="plus"></i>Ajouter</button>
+      </div>
+    </div>
+
+    <div class="panel" style="padding:0;">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Nom</th><th>Catégorie</th><th style="text-align:right;">Prix</th><th style="text-align:right;">TVA</th><th style="text-align:right;">Stock</th></tr></thead>
+          <tbody id="product-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<nav class="mobile-nav">
+  <a href="dashboard.html"><i data-lucide="layout-dashboard"></i>Accueil</a>
+  <a href="clients.html"><i data-lucide="users"></i>Clients</a>
+  <a href="devis.html"><i data-lucide="file-text"></i>Devis</a>
+  <a href="factures.html"><i data-lucide="receipt"></i>Factures</a>
+  <a href="settings.html"><i data-lucide="more-horizontal"></i>Plus</a>
+</nav>
+
+<script src="js/data.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const d = NOVA.data();
+  document.getElementById('product-tbody').innerHTML = d.products.map(p => `
+    <tr>
+      <td class="cell-primary">${p.name}</td>
+      <td class="cell-muted">${p.category}</td>
+      <td class="cell-num">${NOVA.fmt(p.price)}</td>
+      <td class="cell-num">${p.tva}%</td>
+      <td class="cell-num">${p.stock === null ? '<span class="cell-muted">Service</span>' : (p.stock < 5 ? `<span style="color:var(--warning);font-weight:600;">${p.stock}</span>` : p.stock)}</td>
+    </tr>`).join('');
+  novaIcons();
+});
+function novaNewProduct(){
+  const name = prompt('Nom du produit ou service :');
+  if(!name) return;
+  const d = NOVA.data();
+  d.products.unshift({ id:'p'+Date.now(), name, price:0, tva:20, category:'Service', stock:null });
+  NOVA.save(d);
+  novaToast(`${name} ajouté`);
+  location.reload();
+}
+</script>
+</body>
+</html>

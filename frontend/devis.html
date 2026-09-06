@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Devis — NOVA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <aside class="sidebar">
+    <a href="index.html" class="brand"><span class="brand-mark"></span>NOVA</a>
+    <div class="side-search" data-cmdk-trigger><i data-lucide="search"></i> Rechercher... <kbd>⌘K</kbd></div>
+    <nav class="side-nav">
+      <a href="dashboard.html"><i data-lucide="layout-dashboard"></i>Dashboard</a>
+      <a href="clients.html"><i data-lucide="users"></i>Clients</a>
+      <a href="devis.html" class="active"><i data-lucide="file-text"></i>Devis</a>
+      <a href="factures.html"><i data-lucide="receipt"></i>Factures</a>
+      <a href="produits.html"><i data-lucide="package"></i>Produits</a>
+      <a href="paiements.html"><i data-lucide="credit-card"></i>Paiements</a>
+      <a href="depenses.html"><i data-lucide="wallet"></i>Dépenses</a>
+      <a href="rendezvous.html"><i data-lucide="calendar"></i>Rendez-vous</a>
+      <div class="side-sep"></div>
+      <a href="settings.html"><i data-lucide="settings"></i>Paramètres</a>
+      <a href="#"><i data-lucide="help-circle"></i>Aide</a>
+    </nav>
+    <div class="side-foot">
+      <button class="theme-toggle" style="align-self:flex-start;margin-bottom:6px;" onclick="novaToggleTheme()"><i data-lucide="moon" class="icon-moon"></i><i data-lucide="sun" class="icon-sun"></i></button>
+      <div class="user-chip"><div class="avatar">AH</div><div><div class="u-name">Ahmed</div><div class="u-role">Atlas Climatisation</div></div></div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ===== LIST VIEW ===== -->
+    <div id="view-list">
+      <div class="topbar">
+        <h1>Devis</h1>
+        <div class="topbar-actions">
+          <button class="btn btn-primary btn-sm" onclick="novaOpenEditor()"><i data-lucide="plus"></i>Nouveau devis</button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <i data-lucide="search"></i>
+          <input type="text" id="devis-search" placeholder="Rechercher un devis, un client...">
+        </div>
+        <div class="filter-chip"><i data-lucide="filter"></i>Statut</div>
+        <div class="filter-chip"><i data-lucide="calendar"></i>Date</div>
+      </div>
+
+      <div class="panel" style="padding:0;">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>N°</th><th>Client</th><th>Date</th><th style="text-align:right;">Montant</th><th>Statut</th><th></th></tr></thead>
+            <tbody id="devis-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== EDITOR VIEW ===== -->
+    <div id="view-editor" style="display:none;">
+      <div class="topbar">
+        <h1>Créer un devis</h1>
+        <div class="topbar-actions">
+          <button class="btn btn-ghost btn-sm" onclick="novaCloseEditor()"><i data-lucide="arrow-left"></i>Retour</button>
+          <button class="btn btn-secondary btn-sm" onclick="novaDownloadPdf()"><i data-lucide="download"></i>Télécharger PDF</button>
+          <button class="btn btn-primary btn-sm" onclick="novaSaveDevis()"><i data-lucide="check"></i>Enregistrer le devis</button>
+        </div>
+      </div>
+
+      <div class="editor-shell">
+        <div class="editor-col">
+
+          <div class="panel">
+            <div class="field">
+              <label>Client</label>
+              <select id="ed-client"></select>
+            </div>
+
+            <div class="field">
+              <label>Décrivez votre prestation</label>
+              <textarea id="ed-description" placeholder="Ex : Installation de 3 climatiseurs 12000 BTU à 3500 DH chacun + main d'œuvre 900 DH"></textarea>
+            </div>
+
+            <button class="ai-generate-btn" onclick="novaGenerateAI()"><i data-lucide="sparkles"></i>Générer avec l'IA</button>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h2>Articles</h2></div>
+            <div class="line-items" id="line-items"></div>
+            <button class="add-line-btn" onclick="novaAddLine()"><i data-lucide="plus"></i>Ajouter une ligne</button>
+          </div>
+
+          <div class="feature-mini">
+            <h3>🎙️ Créez un devis à la voix</h3>
+            <p>Parlez naturellement. NOVA s'occupe du reste.</p>
+            <button class="btn btn-secondary btn-block" id="voice-btn" onclick="novaVoiceCapture()">
+              <i data-lucide="mic"></i> Maintenir pour parler
+            </button>
+            <div class="voice-dots" id="voice-dots" style="display:none;"><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+
+        </div>
+
+        <div class="doc-sheet" id="doc-sheet">
+          <div class="doc-head">
+            <div>
+              <div class="doc-brand-name">NOVA</div>
+              <div class="doc-brand-tagline">Atlas Climatisation — Installation &amp; maintenance</div>
+            </div>
+            <div class="doc-address">
+              12 Rue Al Amal<br>
+              Casablanca, Maroc<br>
+              ICE : 0021458796000045<br>
+              +212 6 61 22 33 44
+            </div>
+          </div>
+
+          <div class="doc-title-row">
+            <div>
+              <div class="doc-title">DEVIS</div>
+              <div class="doc-number">N° <strong id="doc-num">DEV-2026-025</strong></div>
+            </div>
+            <div class="doc-dates">
+              <div>Date d'émission : <strong id="doc-date"></strong></div>
+              <div>Validité : <strong id="doc-validity"></strong></div>
+            </div>
+          </div>
+
+          <div class="doc-client-box">
+            <div class="lbl">Client</div>
+            <div class="name" id="doc-client-name">—</div>
+            <p id="doc-client-phone"></p>
+          </div>
+
+          <div class="doc-objet">
+            <div class="lbl">Objet</div>
+            <p id="doc-objet">—</p>
+          </div>
+
+          <table class="doc-table">
+            <thead><tr><th>Désignation</th><th>Unité</th><th>Qté</th><th>P.U. HT</th><th>Total HT</th></tr></thead>
+            <tbody id="doc-items"></tbody>
+          </table>
+          <div class="doc-totals">
+            <div class="t-row"><span>Total HT</span><span id="doc-sub">0 DH</span></div>
+            <div class="t-row"><span>TVA (20%)</span><span id="doc-tva">0 DH</span></div>
+            <div class="t-row grand"><span>Total TTC</span><span id="doc-total">0 DH</span></div>
+          </div>
+          <div class="doc-conditions">
+            <div class="lbl">Conditions</div>
+            <p>Paiement : 40% à la commande, 60% à la livraison.</p>
+            <p>Délai d'exécution estimé : 3 à 5 jours ouvrés.</p>
+            <p>Ce devis est valable 30 jours à compter de sa date d'émission.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- AI generation modal -->
+<div class="modal-overlay" id="ai-modal">
+  <div class="modal">
+    <div class="modal-icon"><i data-lucide="sparkles"></i></div>
+    <h3>NOVA AI</h3>
+    <div class="gen-steps">
+      <div class="gen-step" data-step="0"><span class="gs-icon"></span>Compréhension du service</div>
+      <div class="gen-step" data-step="1"><span class="gs-icon"></span>Identification des articles</div>
+      <div class="gen-step" data-step="2"><span class="gs-icon"></span>Calcul des quantités</div>
+      <div class="gen-step" data-step="3"><span class="gs-icon"></span>Finalisation du devis</div>
+    </div>
+  </div>
+</div>
+
+<nav class="mobile-nav">
+  <a href="dashboard.html"><i data-lucide="layout-dashboard"></i>Accueil</a>
+  <a href="clients.html"><i data-lucide="users"></i>Clients</a>
+  <a href="devis.html" class="active"><i data-lucide="file-text"></i>Devis</a>
+  <a href="factures.html"><i data-lucide="receipt"></i>Factures</a>
+  <a href="settings.html"><i data-lucide="more-horizontal"></i>Plus</a>
+</nav>
+
+<script src="js/data.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/app.js"></script>
+<script src="js/devis.js"></script>
+</body>
+</html>
